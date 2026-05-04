@@ -315,7 +315,7 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
   const banner = document.getElementById("status-banner");
 
   async function initStorage() {
-    const cfg = window.FIREBASE_CONFIG || {};
+    const cfg = FIREBASE_CONFIG || {};
     const looksConfigured = cfg.apiKey && cfg.databaseURL;
 
     if (!looksConfigured) {
