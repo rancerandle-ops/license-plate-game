@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -173,6 +174,89 @@
     font-size: 13px;
   }
 
+  /* STATE LIST (alphabetical, filterable — for small states or quick scanning) */
+  #state-list {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    padding: 0 16px;
+  }
+  .list-card {
+    background: #fff;
+    border: 1px solid var(--land-stroke);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .list-header h2 { margin: 0; font-size: 18px; }
+  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-btn {
+    background: #f3f4f6;
+    border: 1px solid var(--land-stroke);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #374151;
+  }
+  .filter-btn:hover { background: #e5e7eb; }
+  .filter-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .state-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .state-card {
+    border: 1px solid var(--land-stroke);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+  }
+  .state-card:hover { border-color: var(--accent); background: #eff6ff; }
+  .state-card.found { background: var(--land-found); border-color: #86efac; }
+  .state-card.found:hover { background: #d1fae5; border-color: #34d399; }
+  .state-card .name-row {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .state-card .abbr { font-weight: 700; font-size: 14px; color: #1f2937; }
+  .state-card .name {
+    font-size: 12px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .state-card .pills {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    min-height: 18px;
+  }
+  .state-card .pill {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 999px;
+    line-height: 1.3;
+  }
+  .state-card .empty-hint {
+    font-size: 11px;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
   /* MODAL */
   .modal-backdrop {
     display: none;
@@ -245,6 +329,20 @@
   </aside>
 </main>
 
+<section id="state-list">
+  <div class="list-card">
+    <div class="list-header">
+      <h2>All states</h2>
+      <div class="filter-pills">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn"        data-filter="unfound">Remaining</button>
+        <button class="filter-btn"        data-filter="found">Found</button>
+      </div>
+    </div>
+    <div class="state-cards" id="state-cards"></div>
+  </div>
+</section>
+
 <div class="modal-backdrop" id="modal">
   <div class="modal">
     <h3 id="modal-title">State</h3>
@@ -285,13 +383,13 @@
      in this browser only — no syncing between family members).
      The README explains how to fill this in.
      ============================================================ */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDcVaJk0yxqw4lnWvnod6CeAprF4sWUOiQ",
-  authDomain: "license-plate-game-d0d68.firebaseapp.com",
-  databaseURL: "https://license-plate-game-d0d68-default-rtdb.firebaseio.com",
-  projectId: "license-plate-game-d0d68",
-  appId: "1:675220450866:web:e4dad7c03a8d6e2deb962b"
-};
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDcVaJk0yxqw4lnWvnod6CeAprF4sWUOiQ",
+    authDomain: "license-plate-game-d0d68.firebaseapp.com",
+    databaseURL: "https://license-plate-game-d0d68-default-rtdb.firebaseio.com",
+    projectId: "license-plate-game-d0d68",
+    appId: "1:675220450866:web:e4dad7c03a8d6e2deb962b"
+  };
 </script>
 
 <!-- ============================================================
@@ -315,7 +413,7 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
   const banner = document.getElementById("status-banner");
 
   async function initStorage() {
-    const cfg = FIREBASE_CONFIG || {};
+    const cfg = (typeof FIREBASE_CONFIG !== 'undefined') ? FIREBASE_CONFIG : {};
     const looksConfigured = cfg.apiKey && cfg.databaseURL;
 
     if (!looksConfigured) {
@@ -392,11 +490,13 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
   // ===========================================================
   // RENDERING
   // ===========================================================
-  const meBar     = document.getElementById("me-bar");
-  const svg       = document.getElementById("usmap");
-  const overlay   = document.getElementById("pill-overlay");
-  const scores    = document.getElementById("scores");
-  const totalsEl  = document.getElementById("totals");
+  const meBar      = document.getElementById("me-bar");
+  const svg        = document.getElementById("usmap");
+  const overlay    = document.getElementById("pill-overlay");
+  const scores     = document.getElementById("scores");
+  const totalsEl   = document.getElementById("totals");
+  const stateCards = document.getElementById("state-cards");
+  let listFilter   = "all";   // "all" | "found" | "unfound"
 
   const playerById = (id) => PLAYERS.find((p) => p.id === id);
 
@@ -504,7 +604,74 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
       (k) => state[k] && Object.keys(state[k]).length > 0
     ).length;
     totalsEl.textContent = `${foundCount} of 51 states/DC found by the family.`;
+    updateFilterCounts(foundCount);
   }
+
+  function updateFilterCounts(foundCount) {
+    const total = window.STATES.length;
+    const remaining = total - foundCount;
+    document.querySelector('[data-filter="all"]').textContent = `All (${total})`;
+    document.querySelector('[data-filter="unfound"]').textContent = `Remaining (${remaining})`;
+    document.querySelector('[data-filter="found"]').textContent = `Found (${foundCount})`;
+  }
+
+  function renderStateCards() {
+    stateCards.innerHTML = "";
+    const sorted = [...window.STATES].sort((a, b) => a.name.localeCompare(b.name));
+    sorted.forEach((s) => {
+      const finders = state[s.id] ? Object.keys(state[s.id]) : [];
+      const isFound = finders.length > 0;
+      if (listFilter === "found" && !isFound) return;
+      if (listFilter === "unfound" && isFound) return;
+
+      const card = document.createElement("div");
+      card.className = "state-card" + (isFound ? " found" : "");
+      card.onclick = () => openModal(s.id);
+
+      const nameRow = document.createElement("div");
+      nameRow.className = "name-row";
+      const abbr = document.createElement("span");
+      abbr.className = "abbr";
+      abbr.textContent = s.id;
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = s.name;
+      nameRow.append(abbr, name);
+
+      const pills = document.createElement("div");
+      pills.className = "pills";
+      if (finders.length === 0) {
+        const hint = document.createElement("span");
+        hint.className = "empty-hint";
+        hint.textContent = "not found yet";
+        pills.appendChild(hint);
+      } else {
+        finders.forEach((pid) => {
+          const p = playerById(pid);
+          if (!p) return;
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.style.background = p.color;
+          pill.textContent = p.id;
+          pill.title = p.name;
+          pills.appendChild(pill);
+        });
+      }
+
+      card.append(nameRow, pills);
+      stateCards.appendChild(card);
+    });
+  }
+
+  // Filter button wiring
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      listFilter = btn.dataset.filter;
+      renderStateCards();
+    });
+  });
 
   // ===========================================================
   // MODAL
@@ -545,6 +712,7 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
         refreshFoundFills();
         refreshOverlays();
         renderScores();
+        renderStateCards();
         openModal(stateCode); // refresh the modal rows
       };
       toggleList.appendChild(row);
@@ -559,12 +727,14 @@ window.STATES = [{"id":"AK","name":"Alaska","d":"M159.6,522.5L159.6,522.3L159.9,
   buildMap();
   buildOverlays();
   renderScores();
+  renderStateCards();
   await initStorage();
   storage.subscribe((data) => {
     state = data || {};
     refreshFoundFills();
     refreshOverlays();
     renderScores();
+    renderStateCards();
   });
 </script>
 </body>
